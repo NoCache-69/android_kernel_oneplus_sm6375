@@ -44,7 +44,7 @@
 
 #define LE_FLOWCTL_MAX_CREDITS 65535
 
-bool disable_ertm;
+bool disable_ertm = true;
 
 static u32 l2cap_feat_mask = L2CAP_FEAT_FIXED_CHAN | L2CAP_FEAT_UCD;
 
