@@ -102,7 +102,7 @@ make O=$OUTPUT_DIR ARCH=arm64 olddefconfig
 make O=$OUTPUT_DIR ARCH=arm64 nconfig
 
 # Optional: compiler flags for perf parity
-# export KCFLAGS="-O3 -pipe -fomit-frame-pointer -fno-stack-protector -fno-var-tracking -flto=thin"
+export KCFLAGS="-O3 -pipe -fomit-frame-pointer -fno-stack-protector -fno-var-tracking -flto=thin -Wno-error=unused-label"
 
 # Start the compilation process
 echo "==> Starting kernel compilation..."
