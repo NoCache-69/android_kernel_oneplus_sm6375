@@ -117,6 +117,9 @@ static ssize_t tmc_etr_byte_cntr_read(struct file *fp, char __user *data,
 				ret = -EINVAL;
 				goto err0;
 			}
+			// After flush, there's no buffer to copy - return success
+            ret = len;
+            goto out;
 		} else {
 			tmc_etr_read_bytes(byte_cntr_data, ppos,
 						   byte_cntr_data->block_size,
