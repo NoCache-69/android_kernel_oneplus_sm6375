@@ -176,8 +176,6 @@ make O=$OUTPUT_DIR ARCH=arm64 ${DEFCONFIG}
 # Regenerate config
 make O=$OUTPUT_DIR ARCH=arm64 olddefconfig
 
-export KCFLAGS="-O3 -flto=thin"
-
 # Common make arguments
 MAKE_ARGS=(
     -j$(nproc)
@@ -210,6 +208,9 @@ MAKE_ARGS+=(
 # Start the compilation process
 echo "==> Starting kernel compilation..."
 echo "Make args: ${MAKE_ARGS[@]}"
+export KCFLAGS="-O3 -flto=thin"
+echo "Started with ${KCFLAGS}"
+
 make "${MAKE_ARGS[@]}"
 
 # Strip modules in-place
