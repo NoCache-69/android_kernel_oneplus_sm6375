@@ -154,8 +154,6 @@ arch/arm/boot/dts/vendor
 #
 Android.bp
 
-build.sh
-
 security/selinux/hooks.c.orig
 
 security/selinux/selinuxfs.c.orig
