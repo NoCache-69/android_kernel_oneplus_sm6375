@@ -3838,42 +3838,30 @@ EXIT:
 	IS_ENABLED(CONFIG_OPLUS_MTK_DRM_GKI_NOTIFY)
 static void lcd_off_early_event(struct touchpanel_data *ts)
 {
-	ts->suspend_state = TP_SUSPEND_EARLY_EVENT;      /*set suspend_resume_state*/
-
+	ts->suspend_state = TP_SUSPEND_EARLY_EVENT;
 	if (ts->esd_handle_support && ts->is_incell_panel
 	    && (ts->tp_suspend_order == LCD_TP_SUSPEND)) {
 		esd_handle_switch(&ts->esd_info, false);
-		/*incell panel need cancel esd early*/
 	}
-
 	if (ts->tp_suspend_order == TP_LCD_SUSPEND) {
 		tp_suspend(ts->dev);
-
 	} else if (ts->tp_suspend_order == LCD_TP_SUSPEND) {
 		if (!ts->gesture_enable && ts->is_incell_panel) {
 			disable_irq_nosync(ts->irq);
+			ts->irq_disabled_by_us = true;  // Track that we disabled it
 		}
-	}
-};
-
-static void lcd_off_event(struct touchpanel_data *ts)
-{
-	if (ts->tp_suspend_order == TP_LCD_SUSPEND) {
-	} else if (ts->tp_suspend_order == LCD_TP_SUSPEND) {
-		tp_suspend(ts->dev);
 	}
 };
 
 static void lcd_on_early_event(struct touchpanel_data *ts)
 {
-	ts->suspend_state = TP_RESUME_EARLY_EVENT;        /*set suspend_resume_state*/
-
+	ts->suspend_state = TP_RESUME_EARLY_EVENT;
 	if (ts->tp_resume_order == TP_LCD_RESUME) {
 		tp_resume(ts->dev);
-
 	} else if (ts->tp_resume_order == LCD_TP_RESUME) {
 		if (!(ts->tp_ic_type == TYPE_TDDI_TCM && ts->is_noflash_ic)) {
 			disable_irq_nosync(ts->irq);
+			ts->irq_disabled_by_us = true;  // Track that we disabled it
 		}
 	}
 };
@@ -3886,8 +3874,10 @@ static void lcd_on_event(struct touchpanel_data *ts)
 #endif
 	} else if (ts->tp_resume_order == LCD_TP_RESUME) {
 		tp_resume(ts->dev);
-		if (!(ts->tp_ic_type == TYPE_TDDI_TCM && ts->is_noflash_ic)) {
+		// Only enable if WE disabled it
+		if (ts->irq_disabled_by_us && !(ts->tp_ic_type == TYPE_TDDI_TCM && ts->is_noflash_ic)) {
 			enable_irq(ts->irq);
+			ts->irq_disabled_by_us = false;  // Reset the flag
 		}
 	}
 };
@@ -3911,7 +3901,14 @@ static void lcd_other_event(int *blank, struct touchpanel_data *ts)
 	} else if (*blank == LCD_CTL_CS_OFF) {
 		tp_control_cs_gpio(0, ts->tp_index);
 	}
+};
 
+static void lcd_off_event(struct touchpanel_data *ts)
+{
+	if (ts->tp_suspend_order == TP_LCD_SUSPEND) {
+	} else if (ts->tp_suspend_order == LCD_TP_SUSPEND) {
+		tp_suspend(ts->dev);
+	}
 };
 
 #if IS_ENABLED(CONFIG_DRM_PANEL_NOTIFY)

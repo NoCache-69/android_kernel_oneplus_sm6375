@@ -708,6 +708,7 @@ struct touchpanel_snr {
 struct aging_test_proc_operations;
 struct debug_info_proc_operations;
 struct touchpanel_data {
+    bool irq_disabled_by_us;
 	/******For feature area********/
 	bool register_is_16bit;                             /*register is 16bit*/
 	bool black_gesture_support;                         /*black_gesture support feature*/
