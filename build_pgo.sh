@@ -2,7 +2,7 @@
 #
 # Kernel build script for OnePlus Nord N30 (larry) with KernelSU support
 # FIXED: Uses proper toolchain for OnePlus kernel sources
-# Added: Profile-Guided Optimization (PGO) support
+# Added: Profile-Guided Optimization (PGO) support for both GCC and Clang
 #
 
 # Exit on any error
@@ -16,6 +16,7 @@ CLEAN_BUILD=false
 DEFCONFIG="vendor/larry-stratosphere_defconfig"
 TOOLCHAIN_TYPE="system"  # Options: aosp, gcc, system
 PGO_PHASE="none"  # Options: none, instrument, optimize
+PGO_COMPILER="detect"  # Options: detect, gcc, clang
 
 # Parse arguments
 for arg in "$@"; do
@@ -44,6 +45,10 @@ for arg in "$@"; do
             PGO_PHASE="optimize"
             echo "==> PGO: Building optimized kernel using profile data"
             ;;
+        --pgo-compiler=*)
+            PGO_COMPILER="${arg#*=}"
+            echo "==> PGO compiler type: $PGO_COMPILER"
+            ;;
         --help|-h)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -54,14 +59,28 @@ for arg in "$@"; do
             echo "  --toolchain=TYPE  Use specific toolchain (aosp, gcc, system)"
             echo "  --pgo-instrument  Build with profiling instrumentation (Phase 1)"
             echo "  --pgo-optimize    Build with PGO optimization (Phase 2)"
+            echo "  --pgo-compiler=TYPE  Force PGO method (gcc, clang, detect)"
             echo "  --help, -h        Show this help message"
             echo ""
-            echo "PGO Workflow:"
-            echo "  1. ./build.sh --pgo-instrument"
-            echo "  2. Flash kernel, use phone normally for 30+ minutes"
-            echo "  3. Run: adb shell 'su -c \"tar -czf /sdcard/pgo_data.tar.gz /sys/kernel/debug/gcov\"'"
-            echo "  4. Run: adb pull /sdcard/pgo_data.tar.gz && tar -xzf pgo_data.tar.gz"
-            echo "  5. ./build.sh --pgo-optimize"
+            echo "PGO Workflows:"
+            echo ""
+            echo "=== GCC PGO (uses GCOV) ==="
+            echo "  1. ./build_pgo.sh --pgo-instrument --toolchain=gcc"
+            echo "  2. Flash kernel, run benchmarks for 30+ minutes"
+            echo "  3. adb shell 'mount -t debugfs none /sys/kernel/debug'"
+            echo "  4. adb shell 'cp -r /sys/kernel/debug/gcov /data/local/tmp/gcov_data'"
+            echo "  5. adb pull /data/local/tmp/gcov_data ~/kernel_gcov_profiles/run1/"
+            echo "  6. cd ~/kernel_gcov_profiles/run1/gcov/home/.../out/"
+            echo "  7. cp -r --parents \$(find . -name '*.gcda') ~/android/.../out/"
+            echo "  8. ./build_pgo.sh --pgo-optimize --toolchain=gcc"
+            echo ""
+            echo "=== Clang PGO (uses LLVM profiling) ==="
+            echo "  1. ./build_pgo.sh --pgo-instrument --toolchain=system (or aosp)"
+            echo "  2. Flash kernel, run benchmarks for 30+ minutes"
+            echo "  3. adb shell 'mount -t debugfs none /sys/kernel/debug'"
+            echo "  4. adb shell 'cp -r /sys/kernel/debug/pgo /data/local/tmp/pgo_data'"
+            echo "  5. adb pull /data/local/tmp/pgo_data ~/kernel_pgo_profiles/run1/"
+            echo "  6. ./build_pgo.sh --pgo-optimize --toolchain=system"
             echo ""
             echo "Default: Incremental build with larry-stratosphere_defconfig"
             exit 0
@@ -92,8 +111,9 @@ OUTPUT_DIR="${CONFIG}/out"
 # Define kernel source tree path (absolute path to common/)
 KERNEL_SRC="${PWD}"
 
-# PGO data directory
-PGO_DATA_DIR="${KERNEL_SRC}/sys/kernel/debug/gcov"
+# PGO data directories
+PGO_GCOV_DIR="${OUTPUT_DIR}"  # For GCC .gcda files
+PGO_CLANG_DIR="${KERNEL_SRC}/../kernel_pgo_profiles/run1/pgo"  # For Clang .profraw
 
 # -----------------
 # TOOLCHAIN SETUP
@@ -170,39 +190,96 @@ if [ "$TOOLCHAIN_TYPE" != "gcc" ]; then
     export LLVM_IAS=1
 fi
 
+# Detect PGO compiler type if auto
+if [ "$PGO_COMPILER" = "detect" ]; then
+    if [ "$TOOLCHAIN_TYPE" = "gcc" ]; then
+        PGO_COMPILER="gcc"
+    else
+        PGO_COMPILER="clang"
+    fi
+fi
+
 # -----------------
 # PGO CONFIGURATION
 # -----------------
 setup_pgo() {
     if [ "$PGO_PHASE" = "instrument" ]; then
-        echo "==> Configuring PGO instrumentation build..."
-        export KCFLAGS="${KCFLAGS} -fprofile-generate"
-        export KCPPFLAGS="${KCPPFLAGS} -fprofile-generate"
+        echo "==> Configuring PGO instrumentation build (${PGO_COMPILER})..."
 
-        # Enable GCOV in kernel config if not already set
-        if ! grep -q "CONFIG_GCOV_KERNEL=y" "${OUTPUT_DIR}/.config" 2>/dev/null; then
-            echo "==> Enabling GCOV_KERNEL for profiling..."
-            echo "CONFIG_GCOV_KERNEL=y" >> "${OUTPUT_DIR}/.config"
-            echo "CONFIG_GCOV_PROFILE_ALL=y" >> "${OUTPUT_DIR}/.config"
+        if [ "$PGO_COMPILER" = "gcc" ]; then
+            echo "==> Using GCC GCOV profiling..."
+            # Enable GCOV profiling via kernel config
+            scripts/config --file "${OUTPUT_DIR}/.config" \
+                --enable GCOV_KERNEL \
+                --enable GCOV_PROFILE_ALL \
+                --disable COMPILE_TEST
+
+            # Regenerate config to apply changes
+            make O=$OUTPUT_DIR ARCH=arm64 olddefconfig
+
+        elif [ "$PGO_COMPILER" = "clang" ]; then
+            echo "==> Using Clang PGO profiling..."
+            # Enable Clang's kernel PGO support
+            scripts/config --file "${OUTPUT_DIR}/.config" \
+                --enable PGO_CLANG \
+                --disable COMPILE_TEST
+
+            # Regenerate config
+            make O=$OUTPUT_DIR ARCH=arm64 olddefconfig
         fi
 
     elif [ "$PGO_PHASE" = "optimize" ]; then
-        echo "==> Configuring PGO optimized build..."
+        echo "==> Configuring PGO optimized build (${PGO_COMPILER})..."
 
-        if [ ! -d "$PGO_DATA_DIR" ]; then
-            echo "ERROR: PGO profile data not found at: $PGO_DATA_DIR"
-            echo ""
-            echo "Please collect profile data first:"
-            echo "  1. Build with --pgo-instrument"
-            echo "  2. Flash and use phone for 30+ minutes"
-            echo "  3. Run: adb shell 'su -c \"tar -czf /sdcard/pgo_data.tar.gz /sys/kernel/debug/gcov\"'"
-            echo "  4. Run: adb pull /sdcard/pgo_data.tar.gz && tar -xzf pgo_data.tar.gz"
-            exit 1
+        if [ "$PGO_COMPILER" = "gcc" ]; then
+            echo "==> Using GCC profile data..."
+            # Check for .gcda files
+            GCDA_COUNT=$(find "${PGO_GCOV_DIR}" -name "*.gcda" 2>/dev/null | wc -l)
+            if [ "$GCDA_COUNT" -eq 0 ]; then
+                echo "ERROR: No .gcda files found in ${PGO_GCOV_DIR}"
+                echo "Please copy profile data first!"
+                exit 1
+            fi
+            echo "✓ Found ${GCDA_COUNT} .gcda profile files"
+            # GCC auto-detects .gcda files, no explicit flags needed
+
+        elif [ "$PGO_COMPILER" = "clang" ]; then
+            echo "==> Using Clang profile data..."
+
+            # Look for .profraw files to merge
+            if [ -d "$PGO_CLANG_DIR" ]; then
+                PROFRAW_COUNT=$(find "${PGO_CLANG_DIR}" -name "*.profraw" 2>/dev/null | wc -l)
+                if [ "$PROFRAW_COUNT" -gt 0 ]; then
+                    echo "✓ Found ${PROFRAW_COUNT} .profraw files"
+
+                    # Find llvm-profdata
+                    LLVM_PROFDATA=$(command -v llvm-profdata 2>/dev/null || echo "")
+                    if [ -z "$LLVM_PROFDATA" ]; then
+                        echo "ERROR: llvm-profdata not found!"
+                        echo "Install with: sudo pacman -S llvm"
+                        exit 1
+                    fi
+
+                    # Merge profile data
+                    echo "==> Merging profile data..."
+                    PROFDATA_FILE="${KERNEL_SRC}/vmlinux.profdata"
+                    $LLVM_PROFDATA merge -output="${PROFDATA_FILE}" \
+                        $(find "${PGO_CLANG_DIR}" -name "*.profraw")
+
+                    # Use merged profile
+                    export KCFLAGS="${KCFLAGS} -fprofile-use=${PROFDATA_FILE}"
+                    export KCPPFLAGS="${KCPPFLAGS} -fprofile-use=${PROFDATA_FILE}"
+                    echo "✓ Using merged profile: ${PROFDATA_FILE}"
+                else
+                    echo "ERROR: No .profraw files found in ${PGO_CLANG_DIR}"
+                    exit 1
+                fi
+            else
+                echo "ERROR: PGO data directory not found: ${PGO_CLANG_DIR}"
+                echo "Please collect profile data first!"
+                exit 1
+            fi
         fi
-
-        export KCFLAGS="${KCFLAGS} -fprofile-use=${PGO_DATA_DIR} -fprofile-correction"
-        export KCPPFLAGS="${KCPPFLAGS} -fprofile-use=${PGO_DATA_DIR} -fprofile-correction"
-        echo "Using profile data from: $PGO_DATA_DIR"
     fi
 }
 
@@ -210,7 +287,7 @@ setup_pgo() {
 # BUILD PROCESS
 # -----------------
 echo "==============================================="
-echo "  Kernel Build Script - Fixed Toolchain + PGO"
+echo "  Kernel Build Script - Dual PGO Support"
 echo "==============================================="
 echo "Device: OnePlus Nord N30 (larry)"
 echo "Platform: Holi (SM6375) - GKI 1.0"
@@ -218,6 +295,7 @@ echo "Defconfig: $DEFCONFIG"
 echo "Clean Build: $CLEAN_BUILD"
 echo "Toolchain: $TOOLCHAIN_TYPE"
 echo "PGO Phase: $PGO_PHASE"
+echo "PGO Compiler: $PGO_COMPILER"
 echo "==============================================="
 
 # Clean the source tree if requested
@@ -248,7 +326,6 @@ MAKE_ARGS=(
 # Add Clang-specific args if using Clang
 if [ "$TOOLCHAIN_TYPE" != "gcc" ]; then
     MAKE_ARGS+=(
-        -j$(nproc)
         CC=clang
         LD=ld.lld
         AR=llvm-ar
@@ -273,10 +350,13 @@ echo "Make args: ${MAKE_ARGS[@]}"
 
 # Set optimization flags (base O3 + LTO, PGO flags added by setup_pgo)
 if [ "$PGO_PHASE" != "instrument" ]; then
-    # Only use LTO for non-instrumented builds (LTO + PGO instrumentation don't mix well)
-    export KCFLAGS="${KCFLAGS:--O3 -flto=thin}"
+    if [ "$TOOLCHAIN_TYPE" != "gcc" ]; then
+        export KCFLAGS="-O3 -flto=thin -march=armv8.2-a+crypto+dotprod"
+    else
+        export KCFLAGS="-O3 -flto -march=armv8.2-a+crypto+dotprod"
+    fi
 else
-    export KCFLAGS="${KCFLAGS:--O3}"
+    export KCFLAGS="-O3"
 fi
 
 echo "KCFLAGS: ${KCFLAGS}"
@@ -325,19 +405,31 @@ echo "==============================================="
 echo "        Build finished successfully!           "
 echo "==============================================="
 echo "Toolchain: $TOOLCHAIN_TYPE"
-echo "PGO Phase: $PGO_PHASE"
+echo "PGO Phase: $PGO_PHASE ($PGO_COMPILER)"
 echo "Kernel Image: ${OUTPUT_DIR}/arch/arm64/boot/Image"
 echo ""
 
 if [ "$PGO_PHASE" = "instrument" ]; then
     echo "Next steps for PGO:"
     echo "1. Flash this instrumented kernel"
-    echo "2. Use phone normally for 30+ minutes (run apps, benchmarks)"
-    echo "3. Collect profile data:"
-    echo "   adb shell 'su -c \"tar -czf /sdcard/pgo_data.tar.gz /sys/kernel/debug/gcov\"'"
-    echo "   adb pull /sdcard/pgo_data.tar.gz"
-    echo "   tar -xzf pgo_data.tar.gz"
-    echo "4. Build optimized kernel: ./build.sh --pgo-optimize"
+    echo "2. Run benchmarks for 30+ minutes"
+    echo ""
+    if [ "$PGO_COMPILER" = "gcc" ]; then
+        echo "3. Collect GCC profile data:"
+        echo "   adb shell 'mount -t debugfs none /sys/kernel/debug'"
+        echo "   adb shell 'cp -r /sys/kernel/debug/gcov /data/local/tmp/gcov_data'"
+        echo "   adb pull /data/local/tmp/gcov_data ~/kernel_gcov_profiles/run1/"
+        echo "   cd ~/kernel_gcov_profiles/run1/gcov/home/.../out/"
+        echo "   cp -r --parents \$(find . -name '*.gcda') ${OUTPUT_DIR}/"
+    else
+        echo "3. Collect Clang profile data:"
+        echo "   adb shell 'mount -t debugfs none /sys/kernel/debug'"
+        echo "   adb shell 'cp -r /sys/kernel/debug/pgo /data/local/tmp/pgo_data'"
+        echo "   adb pull /data/local/tmp/pgo_data ${PGO_CLANG_DIR}/../"
+    fi
+    echo ""
+    echo "4. Build optimized kernel: ./build_pgo.sh --pgo-optimize --toolchain=${TOOLCHAIN_TYPE}"
+
 elif [ "$PGO_PHASE" = "optimize" ]; then
     echo "PGO-optimized kernel built successfully!"
     echo "This kernel is optimized based on your usage patterns."
@@ -347,6 +439,6 @@ else
     echo "2. Flash via recovery"
     echo ""
     echo "For PGO optimization:"
-    echo "  ./build.sh --pgo-instrument  # Then follow on-screen instructions"
+    echo "  ./build_pgo.sh --pgo-instrument [--toolchain=gcc or system]"
 fi
 echo "==============================================="
