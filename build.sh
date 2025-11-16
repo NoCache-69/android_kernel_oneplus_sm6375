@@ -67,7 +67,7 @@ export ARCH=arm64
 export SUBARCH=arm64
 
 # Define the output directory
-CONFIG="${PWD}/../../"
+CONFIG="${PWD}/../"
 OUTPUT_DIR="${CONFIG}/out"
 
 # Define kernel source tree path (absolute path to common/)
