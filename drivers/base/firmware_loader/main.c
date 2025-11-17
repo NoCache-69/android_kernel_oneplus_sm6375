@@ -454,8 +454,7 @@ static const char * const fw_path[] = {
     "/lib/firmware/" UTS_RELEASE,
     "/lib/firmware",
     "/vendor/etc/wifi",
-    "/vendor/etc/wlan",
-    NULL
+    "/vendor/etc/wlan"
 };
 
 /*
