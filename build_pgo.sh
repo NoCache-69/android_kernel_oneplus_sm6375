@@ -313,6 +313,9 @@ make O=$OUTPUT_DIR ARCH=arm64 ${DEFCONFIG}
 # Regenerate config
 make O=$OUTPUT_DIR ARCH=arm64 olddefconfig
 
+# Run nconfig to allow manual configuration
+make O=$OUTPUT_DIR ARCH=arm64 nconfig
+
 # Setup PGO flags if needed
 setup_pgo
 
