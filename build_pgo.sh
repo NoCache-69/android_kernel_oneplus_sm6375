@@ -13,10 +13,10 @@ set -e
 # -----------------
 
 CLEAN_BUILD=false
-DEFCONFIG="vendor/larry-stratosphere_defconfig"
+DEFCONFIG="vendor/larry-exosphere_defconfig"
 TOOLCHAIN_TYPE="system"  # Options: aosp, gcc, system
 PGO_PHASE="none"  # Options: none, instrument, optimize
-PGO_COMPILER="detect"  # Options: detect, gcc, clang
+PGO_COMPILER="none"  # Options: detect, gcc, clang
 
 # Parse arguments
 for arg in "$@"; do
@@ -105,7 +105,7 @@ export ARCH=arm64
 export SUBARCH=arm64
 
 # Define the output directory
-CONFIG="${PWD}/../"
+CONFIG="${PWD}/.."
 OUTPUT_DIR="${CONFIG}/out"
 
 # Define kernel source tree path (absolute path to common/)
@@ -197,6 +197,8 @@ if [ "$PGO_COMPILER" = "detect" ]; then
     else
         PGO_COMPILER="clang"
     fi
+elif [ "$PGO_COMPILER" = "none" ]; then
+        PGO_COMPILER="none"
 fi
 
 # -----------------
@@ -280,6 +282,8 @@ setup_pgo() {
                 exit 1
             fi
         fi
+    elif [ "$PGO_PHASE" = "none" ]; then
+        echo "==> Not configuring PGO options..."
     fi
 }
 

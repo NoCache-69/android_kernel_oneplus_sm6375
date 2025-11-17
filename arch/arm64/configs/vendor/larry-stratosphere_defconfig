@@ -731,7 +731,6 @@ CONFIG_RELR=y
 #
 # GCOV-based kernel profiling
 #
-CONFIG_ARCH_HAS_GCOV_PROFILE_ALL=y
 # end of GCOV-based kernel profiling
 
 CONFIG_HAVE_GCC_PLUGINS=y

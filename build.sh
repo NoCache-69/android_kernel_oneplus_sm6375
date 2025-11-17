@@ -67,7 +67,7 @@ export ARCH=arm64
 export SUBARCH=arm64
 
 # Define the output directory
-CONFIG="${PWD}/../"
+CONFIG="${PWD}/.."
 OUTPUT_DIR="${CONFIG}/out"
 
 # Define kernel source tree path (absolute path to common/)
@@ -208,7 +208,7 @@ MAKE_ARGS+=(
 # Start the compilation process
 echo "==> Starting kernel compilation..."
 echo "Make args: ${MAKE_ARGS[@]}"
-export KCFLAGS="-O3 -flto=thin"
+export KCFLAGS="-O3 -flto=thin -march=armv8.2-a+crypto+dotprod"
 echo "Started with ${KCFLAGS}"
 
 make "${MAKE_ARGS[@]}"
