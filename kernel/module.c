@@ -1343,8 +1343,6 @@ static int check_version(const struct load_info *info,
 	return 1;
 
 bad_version:
-	pr_warn("%s: disagrees about version of symbol but we'll look past that... %s\n",
-	       info->name, symname);
 	return 1;
 }
 
