@@ -285,7 +285,26 @@ int nfc_i2c_dev_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		pr_err("%s : failed to parse dt\n", __func__);
 		goto err;
 	}
-
+	if (!gpio_is_valid(nfc_gpio.ven)) {
+    	pr_err("%s: invalid ven gpio %d\n", __func__, nfc_gpio.ven);
+    	ret = -EINVAL;
+    	goto err;
+	}
+	if (!gpio_is_valid(nfc_gpio.irq)) {
+    	pr_err("%s: invalid irq gpio %d\n", __func__, nfc_gpio.irq);
+    	ret = -EINVAL;
+    	goto err;
+	}
+	if (!gpio_is_valid(nfc_gpio.dwl_req)) {
+    	pr_err("%s: invalid dwl_req gpio %d\n", __func__, nfc_gpio.dwl_req);
+    	ret = -EINVAL;
+    	goto err;
+	}
+	if (!gpio_is_valid(nfc_gpio.clkreq)) {
+    	pr_err("%s: invalid clkreq gpio %d\n", __func__, nfc_gpio.clkreq);
+    	ret = -EINVAL;
+    	goto err;
+	}
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		pr_err("%s : need I2C_FUNC_I2C\n", __func__);
 		ret = -ENODEV;

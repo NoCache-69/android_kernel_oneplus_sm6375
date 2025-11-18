@@ -534,6 +534,15 @@ static int set_nfc_pid(unsigned long arg)
 long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
         unsigned long arg)
 {
+    if (!pn544_dev) {
+        pr_err("%s: pn544_dev is NULL\n", __func__);
+        return -ENODEV;
+    }
+    
+    if (!gpio_is_valid(pn544_dev->ven_gpio)) {
+        pr_err("%s: ven_gpio is invalid: %d\n", __func__, pn544_dev->ven_gpio);
+        return -ENODEV;
+    }
     pr_info("%s :enter cmd = %u, arg = %ld\n", __func__, cmd, arg);
 
     /* Free pass autobahn area, not protected. Use it carefullly. START */
@@ -581,7 +590,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                 pr_info("%s power on with firmware\n", __func__);
                 gpio_set_value(pn544_dev->ven_gpio, 1);
                 msleep(10);
-                if (pn544_dev->firm_gpio) {
+                if (gpio_is_valid(pn544_dev->firm_gpio)) {
                     p61_update_access_state(pn544_dev, P61_STATE_DWNLD, true);
                     gpio_set_value(pn544_dev->firm_gpio, 1);
                 }
@@ -594,7 +603,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
         } else if (arg == 1) {
             /* power on */
             pr_info("%s power on\n", __func__);
-            if (pn544_dev->firm_gpio) {
+            if (gpio_is_valid(pn544_dev->firm_gpio)) {
                 if ((current_state & (P61_STATE_WIRED|P61_STATE_SPI|P61_STATE_SPI_PRIO))== 0){
                     p61_update_access_state(pn544_dev, P61_STATE_IDLE, true);
                 }
@@ -611,7 +620,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
         } else if (arg == 0) {
             /* power off */
             pr_info("%s power off\n", __func__);
-            if (pn544_dev->firm_gpio) {
+            if (gpio_is_valid(pn544_dev->firm_gpio)) {
                 if ((current_state & (P61_STATE_WIRED|P61_STATE_SPI|P61_STATE_SPI_PRIO))== 0){
                     p61_update_access_state(pn544_dev, P61_STATE_IDLE, true);
                 }
@@ -651,7 +660,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
         } else if (arg == 4) {
             pr_info("%s FW dwldioctl called from NFC \n", __func__);
             /*NFC Service called FW dwnld*/
-            if (pn544_dev->firm_gpio) {
+            if (gpio_is_valid(pn544_dev->firm_gpio)) {
                 p61_update_access_state(pn544_dev, P61_STATE_DWNLD, true);
                 gpio_set_value(pn544_dev->firm_gpio, 1);
                 msleep(10);
@@ -1637,7 +1646,7 @@ static int pn544_probe(struct i2c_client *client,
     ret = gpio_request(platform_data->ese_pwr_gpio, "nfc_ese_pwr");
     if (ret)
         goto err_ese_pwr;
-    if (platform_data->firm_gpio) {
+    if (gpio_is_valid(platform_data->firm_gpio)) {
         ret = gpio_request(platform_data->firm_gpio, "nfc_firm");
         if (ret)
             goto err_firm;
@@ -1704,7 +1713,7 @@ static int pn544_probe(struct i2c_client *client,
         pr_err("%s : not able to set ese_pwr gpio as output\n", __func__);
         goto err_ese_pwr;
     }
-    if (platform_data->firm_gpio) {
+    if (gpio_is_valid(platform_data->firm_gpio)) {
         ret = gpio_direction_output(pn544_dev->firm_gpio, 0);
         if (ret < 0) {
             pr_err("%s : not able to set firm_gpio as output\n",
@@ -1816,7 +1825,7 @@ static int pn544_probe(struct i2c_client *client,
     //kfree(pn544_dev);
     //#endif /* VENDOR_EDIT */
     err_exit:
-    if (pn544_dev->firm_gpio)
+    if (gpio_is_valid(pn544_dev->firm_gpio))
         gpio_free(platform_data->firm_gpio);
     err_firm:
     gpio_free(platform_data->ese_pwr_gpio);
@@ -1859,7 +1868,7 @@ static int pn544_remove(struct i2c_client *client)
     pn544_dev->nfc_ven_enabled = false;
     pn544_dev->spi_ven_enabled = false;
 
-    if (pn544_dev->firm_gpio)
+    if (gpio_is_valid(pn544_dev->firm_gpio))
         gpio_free(pn544_dev->firm_gpio);
     kfree(pn544_dev->read_kbuf);
     kfree(pn544_dev->write_kbuf);
@@ -1984,7 +1993,7 @@ static void check_hw_info() {
         pr_info("%s power on with firmware\n", __func__);
         gpio_set_value(pn544_dev->ven_gpio, 1);
         msleep(10);
-        if (pn544_dev->firm_gpio) {
+        if (gpio_is_valid(pn544_dev->firm_gpio)) {
             p61_update_access_state(pn544_dev, P61_STATE_DWNLD, true);
             gpio_set_value(pn544_dev->firm_gpio, 1);
         }
