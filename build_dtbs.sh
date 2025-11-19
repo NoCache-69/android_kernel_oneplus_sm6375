@@ -184,3 +184,11 @@ echo "Kernel+DTB: ${KERNEL_DTB}"
 echo ""
 echo "Next step: Update package_kernel.sh to use Image-dtb"
 echo "==============================================="
+
+if [ -f "../package_kernel.sh" ]; then
+    cd ../
+    bash ./package_kernel.sh
+else
+    echo "WARNING: package_kernel.sh missing!"
+    echo "Run package_kernel.sh manually after build completes."
+fi

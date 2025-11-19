@@ -349,8 +349,8 @@ echo ""
 echo "==> Creating DTB/DTBO images..."
 
 # Run the DTB build script
-if [ -f "../build_dtbs.sh" ]; then
-    bash ../build_dtbs.sh
+if [ -f "./build_dtbs.sh" ]; then
+    bash ./build_dtbs.sh
 else
     echo "WARNING: build_dtbs.sh not found, skipping DTB/DTBO image creation"
     echo "Run build_dtbs.sh manually after build completes"
