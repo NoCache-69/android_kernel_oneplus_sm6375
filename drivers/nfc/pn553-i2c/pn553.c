@@ -651,9 +651,9 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                 p61_update_access_state(pn544_dev, P61_STATE_WIRED, false);
             }
 #ifdef ISO_RST
-            gpio_set_value(pn544_dev->iso_rst_gpio, 0);
+            if (gpio_is_valid(pn544_dev->iso_rst_gpio)) gpio_set_value(pn544_dev->iso_rst_gpio, 0);
             msleep(50);
-            gpio_set_value(pn544_dev->iso_rst_gpio, 1);
+            if (gpio_is_valid(pn544_dev->iso_rst_gpio)) gpio_set_value(pn544_dev->iso_rst_gpio, 1);
             msleep(50);
             pr_info("%s ISO RESET from DWP DONE\n", __func__);
 #endif
@@ -723,7 +723,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                     msleep(10);
                 }
                 /* pull the gpio to high once NFCC is power on*/
-                gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
+                if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
 
                 /* Delay (10ms) after SVDD_PWR_ON to allow JCOP to bootup (5ms jcop boot time + 5ms guard time) */
                 usleep_range(10000, 12000);
@@ -736,7 +736,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                 }
 
             } else if ((current_state & (P61_STATE_SPI|P61_STATE_SPI_PRIO))
-                 && (gpio_get_value(pn544_dev->ese_pwr_gpio)) && (gpio_get_value(pn544_dev->ven_gpio))) {
+                 && (gpio_is_valid(pn544_dev->ese_pwr_gpio) && gpio_get_value(pn544_dev->ese_pwr_gpio)) && (gpio_get_value(pn544_dev->ven_gpio))) {
                 /* Returning success if SET_SPM_POWER called while already SPI is open */
                    return 0;
             } else {
@@ -778,7 +778,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                 if (!(current_state & P61_STATE_WIRED) && !(pn544_dev->secure_timer_cnt))
                 {
 #ifndef JCOP_4X_VALIDATION
-                    gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
+                    if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
                     /* Delay (2.5ms) after SVDD_PWR_OFF for the shutdown settlement time */
                     usleep_range(2500, 3000);
 #endif
@@ -817,7 +817,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
 
                       if (!(pn544_dev->secure_timer_cnt)) {
 #ifndef JCOP_4X_VALIDATION
-                          gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
+                          if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
                           /* Delay (2.5ms) after SVDD_PWR_OFF for the shutdown settlement time */
                           usleep_range(2500, 3000);
 #endif
@@ -862,7 +862,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                       if(pn544_dev->chip_pwr_scheme == PN80T_LEGACY_PWR_SCHEME)
                       {
 #ifndef JCOP_4X_VALIDATION
-                          gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
+                          if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
 #endif
                           if(current_state & P61_STATE_SPI_FAILED){
                               p61_update_access_state(pn544_dev, P61_STATE_SPI_FAILED, false);
@@ -902,11 +902,11 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                 {
                     svdd_sync_onoff(pn544_dev->nfc_service_pid, P61_STATE_SPI_SVDD_SYNC_START);
 #ifndef JCOP_4X_VALIDATION
-                    gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
+                    if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
 #endif
                     svdd_sync_onoff(pn544_dev->nfc_service_pid, P61_STATE_SPI_SVDD_SYNC_END);
                     msleep(10);
-                    if(!gpio_get_value(pn544_dev->ese_pwr_gpio))
+                    if(gpio_is_valid(pn544_dev->ese_pwr_gpio) && !gpio_get_value(pn544_dev->ese_pwr_gpio))
                         gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
                     msleep(10);
                 }
@@ -937,7 +937,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                         msleep(10);
                     }
                     /* pull the gpio to high once NFCC is power on*/
-                    gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
+                    if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
 
                     /* Delay (10ms) after SVDD_PWR_ON to allow JCOP to bootup (5ms jcop boot time + 5ms guard time) */
                     usleep_range(10000, 12000);
@@ -984,9 +984,9 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                 p61_update_access_state(pn544_dev, P61_STATE_SPI_PRIO, false);
             }
 #ifdef ISO_RST
-            gpio_set_value(pn544_dev->iso_rst_gpio, 0);
+            if (gpio_is_valid(pn544_dev->iso_rst_gpio)) gpio_set_value(pn544_dev->iso_rst_gpio, 0);
             msleep(50);
-            gpio_set_value(pn544_dev->iso_rst_gpio, 1);
+            if (gpio_is_valid(pn544_dev->iso_rst_gpio)) gpio_set_value(pn544_dev->iso_rst_gpio, 1);
             msleep(50);
             pr_info("%s ISO RESET from SPI DONE\n", __func__);
 #endif
@@ -1039,7 +1039,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                     }
                 }
                 if((current_state & (P61_STATE_SPI|P61_STATE_SPI_PRIO)) == 0 && (pn544_dev->chip_pwr_scheme == PN67T_PWR_SCHEME))
-                    gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
+                    if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
             } else {
                 pr_info("%s : P61_SET_WIRED_ACCESS -  enabling failed \n", __func__);
                 return -EBUSY; /* Device or resource busy */
@@ -1051,7 +1051,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
                 if((current_state & (P61_STATE_SPI|P61_STATE_SPI_PRIO)) == 0 && (pn544_dev->chip_pwr_scheme == PN67T_PWR_SCHEME))
                 {
                     svdd_sync_onoff(pn544_dev->nfc_service_pid, P61_STATE_SPI_SVDD_SYNC_START);
-                    gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
+                    if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
                     svdd_sync_onoff(pn544_dev->nfc_service_pid, P61_STATE_SPI_SVDD_SYNC_END);
                 }
             } else {
@@ -1066,7 +1066,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
              if(pn544_dev->chip_pwr_scheme == PN67T_PWR_SCHEME)
              {
                  svdd_sync_onoff(pn544_dev->nfc_service_pid, P61_STATE_SPI_SVDD_SYNC_START);
-                 gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
+                 if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
                  svdd_sync_onoff(pn544_dev->nfc_service_pid, P61_STATE_SPI_SVDD_SYNC_END);
              }
         }
@@ -1074,7 +1074,7 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
         {
             //pr_info("%s : P61_ESE_GPIO_HIGH  \n", __func__);
             if(pn544_dev->chip_pwr_scheme == PN67T_PWR_SCHEME)
-            gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
+            if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
         }
         else if(arg == 4)
         {
@@ -1082,14 +1082,14 @@ long  pn544_dev_ioctl(struct file *filp, unsigned int cmd,
         }
         else if(arg == 5)
         {
-            gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
-            if (gpio_get_value(pn544_dev->ese_pwr_gpio)) {
+            if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 1);
+            if (gpio_is_valid(pn544_dev->ese_pwr_gpio) && gpio_get_value(pn544_dev->ese_pwr_gpio)) {
                 pr_info("%s: ese_pwr gpio is enabled\n", __func__);
             }
         }
         else if(arg == 6)
         {
-            gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
+            if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
             pr_info("%s: ese_pwr gpio set to low\n", __func__);
         }
         else {
@@ -1147,7 +1147,7 @@ static void secure_timer_workqueue(struct work_struct *Wq)
   if((current_state & (P61_STATE_SPI|P61_STATE_SPI_PRIO)) == 0)
   {
       printk( KERN_INFO "secure_timer_callback: make se_pwer_gpio low, state = %d", current_state);
-      gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
+      if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) gpio_set_value(pn544_dev->ese_pwr_gpio, 0);
       /* Delay (2.5ms) after SVDD_PWR_OFF for the shutdown settlement time */
       usleep_range(2500, 3000);
       if(pn544_dev->nfc_service_pid == 0x00)
@@ -1708,11 +1708,13 @@ static int pn544_probe(struct i2c_client *client,
         pr_err("%s : not able to set ven_gpio as output\n", __func__);
         goto err_firm;
     }
+if (gpio_is_valid(pn544_dev->ese_pwr_gpio)) {
     ret = gpio_direction_output(pn544_dev->ese_pwr_gpio, 0);
     if (ret < 0) {
         pr_err("%s : not able to set ese_pwr gpio as output\n", __func__);
         goto err_ese_pwr;
     }
+}
     if (gpio_is_valid(platform_data->firm_gpio)) {
         ret = gpio_direction_output(pn544_dev->firm_gpio, 0);
         if (ret < 0) {
@@ -1722,11 +1724,13 @@ static int pn544_probe(struct i2c_client *client,
         }
     }
 #ifdef ISO_RST
+if (gpio_is_valid(pn544_dev->iso_rst_gpio)) {
     ret = gpio_direction_output(pn544_dev->iso_rst_gpio, 0);
     if (ret < 0) {
         pr_err("%s : not able to set iso rst gpio as output\n", __func__);
         goto err_iso_rst;
     }
+}
 #endif
     /* init mutex and queues */
     init_waitqueue_head(&pn544_dev->read_wq);
@@ -1756,7 +1760,7 @@ static int pn544_probe(struct i2c_client *client,
     #endif
 #ifdef ISO_RST
     /* Setting ISO RESET pin high to power ESE during init */
-    gpio_set_value(pn544_dev->iso_rst_gpio, 1);
+    if (gpio_is_valid(pn544_dev->iso_rst_gpio)) gpio_set_value(pn544_dev->iso_rst_gpio, 1);
 #endif
     /* request irq.  the irq is set whenever the chip has data available
      * for reading.  it is cleared when all data has been read.
