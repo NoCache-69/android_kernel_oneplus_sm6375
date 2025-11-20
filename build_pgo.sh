@@ -294,9 +294,9 @@ echo "==> Starting kernel compilation..."
 
 if [ "$PGO_PHASE" != "instrument" ]; then
     if [ "$TOOLCHAIN_TYPE" != "gcc" ]; then
-        export KCFLAGS="-O3 -flto=thin -march=armv8.2-a+crypto+dotprod"
+        export KCFLAGS="-O3 -flto=thin -march=armv8.2-a+crypto+dotprod -mtune=cortex-a78"
     else
-        export KCFLAGS="-O3 -flto -march=armv8.2-a+crypto+dotprod"
+        export KCFLAGS="-O3 -flto -march=armv8.2-a+crypto+dotprod -mtune=cortex-a78"
     fi
 else
     export KCFLAGS="-O3"
