@@ -297,8 +297,14 @@ static int __init androidboot_startupmode(char *p)
 	if (strcmp(p, "dc_charger"))
 		return 1;
 
+	/* If force_normal_boot is set, this is a reboot - don't enter charger mode */
+	if (strstr(boot_command_line, "androidboot.force_normal_boot=1"))
+		return 0;
+
+	/* Cold boot while charging - switch to charger mode */
 	if ((offset_addr = strstr(boot_command_line, "androidboot.mode=normal"))) {
-		memcpy(offset_addr, "androidboot.mode=charger", sizeof("androidboot.mode=charger") - 1);
+		memcpy(offset_addr, "androidboot.mode=charger", 
+		       sizeof("androidboot.mode=charger") - 1);
 		offset_addr[sizeof("androidboot.mode=charger") - 1] = ' ';
 	}
 
