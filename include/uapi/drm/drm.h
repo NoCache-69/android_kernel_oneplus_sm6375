@@ -70,6 +70,16 @@ typedef unsigned long drm_handle_t;
 extern "C" {
 #endif
 
+#ifndef __user
+#define __user
+#endif
+#ifndef __kernel
+#define __kernel
+#endif
+#ifndef __iomem
+#define __iomem
+#endif
+
 #define DRM_NAME	"drm"	  /**< Name in kernel, /dev, and /proc */
 #define DRM_MIN_ORDER	5	  /**< At least 2^5 bytes = 32 bytes */
 #define DRM_MAX_ORDER	22	  /**< Up to 2^22 bytes = 4MB */
