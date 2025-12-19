@@ -945,7 +945,7 @@ CONFIG_CORESIGHT_REMOTE_ETM=y
 CONFIG_CORESIGHT_TGU=y
 CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3=y
 # CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE is not set
-CONFIG_LSM="lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,baseband_guard"
+CONFIG_LSM="lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor"
 CONFIG_SCHED_AUTOGROUP=y
 CONFIG_FAIR_GROUP_SCHED=y
 CONFIG_LOCKDEP_SUPPORT=y
@@ -959,7 +959,7 @@ CONFIG_NET_SCH_FQ=y
 # CONFIG_HAVE_DEBUG_KMEMLEAK is not set
 # CONFIG_STACKTRACE is not set
 # CONFIG_BUG_ON_DATA_CORRUPTION is not set
-CONFIG_DEBUG_INFO=y
+# CONFIG_DEBUG_INFO is not set
 CONFIG_DEBUG_INFO_REDUCED=y
 CONFIG_DEBUG_LIST=y
 
@@ -997,9 +997,6 @@ CONFIG_KSU_SUSFS_SUS_SU=y
 #
 # Baseband Security Guard Configuration
 #
-CONFIG_BBG=y
-CONFIG_BBG_ALLOW_IN_RECOVERY=y
-# CONFIG_BBG_BLOCK_BOOT is not set
-CONFIG_BBG_DOMAIN_PROTECTION=y
-CONFIG_BBG_ANTI_SPOOF_DOMAIN=3
+CONFIG_BBG=n
+
 # end of Baseband Security Guard Configuration
